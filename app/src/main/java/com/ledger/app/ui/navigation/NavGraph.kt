@@ -89,13 +89,22 @@ fun NavGraph(container: AppContainer) {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Dashboard.route,
+            startDestination = Screen.Splash.route,
             modifier = Modifier.padding(padding),
             enterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(220)) { it / 6 } },
             exitTransition = { fadeOut(tween(180)) },
             popEnterTransition = { fadeIn(tween(220)) },
             popExitTransition = { fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { it / 6 } }
         ) {
+            composable(Screen.Splash.route) {
+                com.ledger.app.ui.splash.SplashScreen(
+                    onFinished = {
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
             composable(Screen.Dashboard.route) {
                 val vm = remember {
                     DashboardViewModel(
