@@ -19,7 +19,8 @@ import androidx.compose.foundation.clickable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onManageCategories: () -> Unit,
-    onManageBudgets: () -> Unit
+    onManageBudgets: () -> Unit,
+    onViewReports: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
@@ -39,6 +40,7 @@ fun SettingsScreen(
                 SettingsSectionHeader("Manage")
                 SettingsRow(icon = Icons.Filled.Category, title = "Manage Categories", onClick = onManageCategories)
                 SettingsRow(icon = Icons.Filled.PieChart, title = "Manage Budgets", onClick = onManageBudgets)
+                SettingsRow(icon = Icons.Filled.BarChart, title = "Reports", onClick = onViewReports)
             }
             item {
                 SettingsSectionHeader("Data")

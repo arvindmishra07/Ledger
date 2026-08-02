@@ -203,7 +203,8 @@ fun NavGraph(container: AppContainer) {
                 SettingsScreen(
                     viewModel = vm,
                     onManageCategories = { navController.navigate(Screen.Categories.route) },
-                    onManageBudgets = { navController.navigate(Screen.Budgets.route) }
+                    onManageBudgets = { navController.navigate(Screen.Budgets.route) },
+                    onViewReports = { navController.navigate(Screen.Reports.route) }
                 )
             }
         }
