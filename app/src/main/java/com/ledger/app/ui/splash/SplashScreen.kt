@@ -1,158 +1,253 @@
 package com.ledger.app.ui.splash
 
-
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.ledger.app.ui.theme.BackgroundDark
-import com.ledger.app.ui.theme.EmeraldGreen
-import com.ledger.app.ui.theme.TealAccent
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private val SplashBackground = Color(0xFF16302A)
+private val SplashWaveDeep = Color(0xFF1B3B2B)
+private val SplashWaveMid = Color(0xFF224A37)
+private val SplashMintPrimary = Color(0xFFC8F5D2)
+private val SplashMintMuted = Color(0xFF8EC79E)
+private val SplashGlowArrow = Color(0xFFEAFDF0)
+
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
-    val bar1 = remember { Animatable(0f) }
-    val bar2 = remember { Animatable(0f) }
-    val bar3 = remember { Animatable(0f) }
-    val lineProgress = remember { Animatable(0f) }
-    val textAlpha = remember { Animatable(0f) }
+    val bookAlpha = remember { Animatable(0f) }
+    val arrowProgress = remember { Animatable(0f) }
+    val wordmarkAlpha = remember { Animatable(0f) }
+    val sparkleAlpha = remember { Animatable(0f) }
     val exitAlpha = remember { Animatable(1f) }
-    val logoScale = remember { Animatable(0.8f) }
+
+    // Precise coordinates for ambient sparkles matching the design mockup
+    val sparkles = remember {
+        listOf(
+            Pair(0.18f, 0.28f),
+            Pair(0.82f, 0.24f),
+            Pair(0.78f, 0.42f),
+            Pair(0.22f, 0.65f),
+            Pair(0.85f, 0.72f),
+            Pair(0.15f, 0.82f)
+        )
+    }
 
     LaunchedEffect(Unit) {
-        launch {
-            logoScale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
-        }
-        bar1.animateTo(1f, animationSpec = tween(350, easing = FastOutSlowInEasing))
-        bar2.animateTo(1f, animationSpec = tween(350, easing = FastOutSlowInEasing))
-        bar3.animateTo(1f, animationSpec = tween(350, easing = FastOutSlowInEasing))
-        lineProgress.animateTo(1f, animationSpec = tween(500, easing = FastOutSlowInEasing))
-        textAlpha.animateTo(1f, animationSpec = tween(400))
+        launch { bookAlpha.animateTo(1f, tween(500, easing = FastOutSlowInEasing)) }
+        delay(200)
+        launch { arrowProgress.animateTo(1f, tween(750, easing = FastOutSlowInEasing)) }
+        delay(200)
+        launch { sparkleAlpha.animateTo(1f, tween(600)) }
+        wordmarkAlpha.animateTo(1f, tween(450))
 
-        delay(500)
+        delay(850)
 
-        exitAlpha.animateTo(0f, animationSpec = tween(350))
+        exitAlpha.animateTo(0f, tween(300))
         onFinished()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundDark)
-            .alpha(exitAlpha.value),
-        contentAlignment = Alignment.Center
+            .background(SplashBackground)
+            .alpha(exitAlpha.value)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Organic flowing background waves
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+
+            // Top soft vignette shape
+            val topWave = Path().apply {
+                moveTo(0f, 0f)
+                lineTo(w, 0f)
+                lineTo(w, h * 0.18f)
+                quadraticBezierTo(w * 0.5f, h * 0.25f, 0f, h * 0.12f)
+                close()
+            }
+            drawPath(topWave, color = SplashWaveDeep.copy(alpha = 0.55f))
+
+            // Lower primary rolling wave
+            val bottomWave1 = Path().apply {
+                moveTo(0f, h * 0.62f)
+                cubicTo(w * 0.25f, h * 0.54f, w * 0.65f, h * 0.68f, w, h * 0.60f)
+                lineTo(w, h)
+                lineTo(0f, h)
+                close()
+            }
+            drawPath(bottomWave1, color = SplashWaveDeep.copy(alpha = 0.7f))
+
+            // Lower secondary foreground wave
+            val bottomWave2 = Path().apply {
+                moveTo(0f, h * 0.76f)
+                cubicTo(w * 0.35f, h * 0.70f, w * 0.70f, h * 0.84f, w, h * 0.75f)
+                lineTo(w, h)
+                lineTo(0f, h)
+                close()
+            }
+            drawPath(bottomWave2, color = SplashWaveMid.copy(alpha = 0.5f))
+
+            // Ambient sparkles
+            sparkles.forEach { (fx, fy) ->
+                val cx = w * fx
+                val cy = h * fy
+                drawSparkle(cx, cy, 7f * sparkleAlpha.value, SplashMintPrimary.copy(alpha = 0.65f * sparkleAlpha.value))
+            }
+        }
+
+        // Center Content: Hand-drawn Book Icon, Wordmark, and Tagline
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Canvas(
                 modifier = Modifier
-                    .size(120.dp)
-                    .scale(logoScale.value)
+                    .size(110.dp)
+                    .alpha(bookAlpha.value)
             ) {
-                val w = size.width
-                val h = size.height
-                val barWidth = w * 0.11f
+                val scale = size.width / 108f
+                val baseStroke = 3.2f * scale
+                val accentStroke = 1.8f * scale
 
-                // Bar 1 (shortest)
-                drawRoundRectBar(
-                    x = w * 0.28f,
-                    bottom = h * 0.70f,
-                    width = barWidth,
-                    fullHeight = h * 0.15f,
-                    progress = bar1.value,
-                    color = Color(0xFF00A87D)
-                )
-                // Bar 2 (medium)
-                drawRoundRectBar(
-                    x = w * 0.44f,
-                    bottom = h * 0.70f,
-                    width = barWidth,
-                    fullHeight = h * 0.28f,
-                    progress = bar2.value,
-                    color = EmeraldGreen
-                )
-                // Bar 3 (tallest)
-                drawRoundRectBar(
-                    x = w * 0.60f,
-                    bottom = h * 0.70f,
-                    width = barWidth,
-                    fullHeight = h * 0.43f,
-                    progress = bar3.value,
-                    color = TealAccent
+                val strokeMain = Stroke(width = baseStroke, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                val strokeOuter = Stroke(width = accentStroke, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+                // Outer layered page contours
+                val leftOuter = Path().apply {
+                    moveTo(54f * scale, 41f * scale)
+                    quadraticBezierTo(34f * scale, 42f * scale, 25f * scale, 50f * scale)
+                    quadraticBezierTo(23f * scale, 67f * scale, 31f * scale, 76f * scale)
+                    quadraticBezierTo(42f * scale, 80f * scale, 54f * scale, 77f * scale)
+                }
+                drawPath(leftOuter, color = SplashMintMuted, style = strokeOuter)
+
+                val rightOuter = Path().apply {
+                    moveTo(54f * scale, 41f * scale)
+                    quadraticBezierTo(74f * scale, 42f * scale, 83f * scale, 50f * scale)
+                    quadraticBezierTo(85f * scale, 67f * scale, 77f * scale, 76f * scale)
+                    quadraticBezierTo(66f * scale, 80f * scale, 54f * scale, 77f * scale)
+                }
+                drawPath(rightOuter, color = SplashMintMuted, style = strokeOuter)
+
+                // Main Book Wings
+                val leftWing = Path().apply {
+                    moveTo(54f * scale, 44f * scale)
+                    quadraticBezierTo(36f * scale, 45f * scale, 28f * scale, 54f * scale)
+                    quadraticBezierTo(27f * scale, 68f * scale, 35f * scale, 74f * scale)
+                    quadraticBezierTo(44f * scale, 78f * scale, 54f * scale, 74f * scale)
+                }
+                drawPath(leftWing, color = SplashMintPrimary, style = strokeMain)
+
+                val rightWing = Path().apply {
+                    moveTo(54f * scale, 44f * scale)
+                    quadraticBezierTo(72f * scale, 45f * scale, 80f * scale, 54f * scale)
+                    quadraticBezierTo(81f * scale, 68f * scale, 73f * scale, 74f * scale)
+                    quadraticBezierTo(64f * scale, 78f * scale, 54f * scale, 74f * scale)
+                }
+                drawPath(rightWing, color = SplashMintPrimary, style = strokeMain)
+
+                // Book Center Spine
+                drawLine(
+                    color = SplashMintPrimary,
+                    start = Offset(54f * scale, 44f * scale),
+                    end = Offset(54f * scale, 74f * scale),
+                    strokeWidth = baseStroke,
+                    cap = StrokeCap.Round
                 )
 
-                // Trend line arcing above the bars
-                if (lineProgress.value > 0f) {
-                    val startPoint = Offset(w * 0.28f, h * 0.52f)
-                    val midPoint = Offset(w * 0.50f, h * 0.36f)
-                    val endPoint = Offset(w * 0.72f, h * 0.20f)
-
-                    val path = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(startPoint.x, startPoint.y)
-                        quadraticBezierTo(midPoint.x, midPoint.y, endPoint.x, endPoint.y)
+                // Animated Growth Loop Arrow
+                if (arrowProgress.value > 0f) {
+                    val loopPath = Path().apply {
+                        moveTo(40f * scale, 73f * scale)
+                        cubicTo(30f * scale, 62f * scale, 31f * scale, 44f * scale, 48f * scale, 39f * scale)
+                        cubicTo(62f * scale, 35f * scale, 74f * scale, 45f * scale, 68f * scale, 59f * scale)
+                        cubicTo(63f * scale, 70f * scale, 48f * scale, 70f * scale, 47f * scale, 56f * scale)
+                        cubicTo(46f * scale, 45f * scale, 56f * scale, 33f * scale, 72f * scale, 28f * scale)
                     }
 
+                    val pathLength = 160f * scale
                     drawPath(
-                        path = path,
-                        color = Color(0xFFF5F7FA),
+                        path = loopPath,
+                        color = SplashGlowArrow,
                         style = Stroke(
-                            width = 6f,
+                            width = baseStroke + 0.5f,
                             cap = StrokeCap.Round,
+                            join = StrokeJoin.Round,
                             pathEffect = PathEffect.dashPathEffect(
-                                floatArrayOf(400f, 400f),
-                                phase = 400f - (400f * lineProgress.value)
+                                floatArrayOf(pathLength, pathLength),
+                                phase = pathLength * (1f - arrowProgress.value)
                             )
                         )
                     )
+
+                    // Arrowhead reveals upon loop completion
+                    if (arrowProgress.value > 0.85f) {
+                        val headFade = ((arrowProgress.value - 0.85f) / 0.15f).coerceIn(0f, 1f)
+                        val headColor = SplashGlowArrow.copy(alpha = headFade)
+                        drawLine(headColor, Offset(64f * scale, 27f * scale), Offset(72f * scale, 28f * scale), baseStroke + 0.5f, StrokeCap.Round)
+                        drawLine(headColor, Offset(72f * scale, 28f * scale), Offset(71f * scale, 36f * scale), baseStroke + 0.5f, StrokeCap.Round)
+                    }
                 }
             }
 
             Spacer(Modifier.height(20.dp))
 
             Text(
-                text = "Ledger",
-                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                color = Color(0xFFF5F7FA),
-                modifier = Modifier.alpha(textAlpha.value)
+                text = "ledger",
+                color = SplashMintPrimary,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.SansSerif,
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.alpha(wordmarkAlpha.value)
             )
+
+            Spacer(Modifier.height(4.dp))
+
             Text(
-                text = "Track every rupee",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF9BA5B4),
-                modifier = Modifier.alpha(textAlpha.value)
+                text = "your manual finance journal",
+                color = SplashMintMuted,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = FontFamily.SansSerif,
+                letterSpacing = 0.2.sp,
+                modifier = Modifier.alpha(wordmarkAlpha.value)
             )
         }
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRoundRectBar(
-    x: Float,
-    bottom: Float,
-    width: Float,
-    fullHeight: Float,
-    progress: Float,
-    color: Color
-) {
-    val animatedHeight = fullHeight * progress
-    drawRoundRect(
-        color = color,
-        topLeft = Offset(x, bottom - animatedHeight),
-        size = androidx.compose.ui.geometry.Size(width, animatedHeight),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(width * 0.25f, width * 0.25f)
-    )
+private fun DrawScope.drawSparkle(cx: Float, cy: Float, size: Float, color: Color) {
+    if (size <= 0f) return
+    val path = Path().apply {
+        moveTo(cx, cy - size)
+        lineTo(cx + size * 0.25f, cy - size * 0.25f)
+        lineTo(cx + size, cy)
+        lineTo(cx + size * 0.25f, cy + size * 0.25f)
+        lineTo(cx, cy + size)
+        lineTo(cx - size * 0.25f, cy + size * 0.25f)
+        lineTo(cx - size, cy)
+        lineTo(cx - size * 0.25f, cy - size * 0.25f)
+        close()
+    }
+    drawPath(path, color = color)
 }

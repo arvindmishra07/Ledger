@@ -28,6 +28,8 @@ class BudgetsViewModel(
     private val transactionRepository: TransactionRepository
 ) : ViewModel() {
 
+    private val _events = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+    val events: kotlinx.coroutines.flow.SharedFlow<String> = _events.asSharedFlow()
     private val monthYear = MutableStateFlow(DateUtils.currentMonth() to DateUtils.currentYear())
     private val editorState = MutableStateFlow<Pair<Boolean, Long?>>(false to null)
 
@@ -94,15 +96,23 @@ class BudgetsViewModel(
     }
 
     fun saveBudget(amount: Double) {
+        if (amount <= 0.0) {
+            viewModelScope.launch { _events.emit("Enter a valid budget amount") }
+            return
+        }
         viewModelScope.launch {
-            val (month, year) = monthYear.value
-            val categoryId = editorState.value.second
-            if (categoryId == null) {
-                budgetRepository.setOverallBudget(amount, month, year)
-            } else {
-                budgetRepository.setCategoryBudget(categoryId, amount, month, year)
+            try {
+                val (month, year) = monthYear.value
+                val categoryId = editorState.value.second
+                if (categoryId == null) {
+                    budgetRepository.setOverallBudget(amount, month, year)
+                } else {
+                    budgetRepository.setCategoryBudget(categoryId, amount, month, year)
+                }
+                closeEditor()
+            } catch (e: Exception) {
+                _events.emit("Couldn't save budget: ${e.message}")
             }
-            closeEditor()
         }
     }
 

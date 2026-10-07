@@ -199,7 +199,9 @@ fun NavGraph(container: AppContainer) {
             }
 
             composable(Screen.Settings.route) {
-                val vm = remember { SettingsViewModel(container.settingsDataStore, container.transactionRepository) }
+                val vm = remember {
+                    SettingsViewModel(container.settingsDataStore, container.transactionRepository, container.categoryRepository)
+                }
                 SettingsScreen(
                     viewModel = vm,
                     onManageCategories = { navController.navigate(Screen.Categories.route) },

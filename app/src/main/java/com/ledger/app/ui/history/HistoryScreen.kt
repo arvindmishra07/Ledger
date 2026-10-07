@@ -61,6 +61,20 @@ fun HistoryScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            if (state.filters.searchQuery.isBlank()) {
+                com.ledger.app.ui.components.MonthSelectorTopBar(
+                    month = state.filters.month,
+                    year = state.filters.year,
+                    onPrevious = {
+                        val (m, y) = com.ledger.app.ui.util.DateUtils.previousMonth(state.filters.month, state.filters.year)
+                        viewModel.setMonth(m, y)
+                    },
+                    onNext = {
+                        val (m, y) = com.ledger.app.ui.util.DateUtils.nextMonth(state.filters.month, state.filters.year)
+                        viewModel.setMonth(m, y)
+                    }
+                )
+            }
 
             OutlinedTextField(
                 value = state.filters.searchQuery,

@@ -143,6 +143,73 @@ class GetInsightsUseCase(
             )
         }
 
+        // No-spend days
+        val spendDays = expenses.map {
+            java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it.date))
+        }.toSet()
+        val noSpendDays = dayOfMonth - spendDays.size
+        if (noSpendDays > 0) {
+            insights.add(
+                Insight(
+                    title = "No-spend days",
+                    description = "You had $noSpendDays day(s) this month with zero spending. Nice restraint.",
+                    severity = InsightSeverity.POSITIVE
+                )
+            )
+        }
+
+        // Weekday vs weekend average
+        val cal = Calendar.getInstance()
+        val weekdayTotal = expenses.filter {
+            cal.timeInMillis = it.date
+            val day = cal.get(Calendar.DAY_OF_WEEK)
+            day != Calendar.SATURDAY && day != Calendar.SUNDAY
+        }.sumOf { it.amount }
+        val weekendTotal = expenses.filter {
+            cal.timeInMillis = it.date
+            val day = cal.get(Calendar.DAY_OF_WEEK)
+            day == Calendar.SATURDAY || day == Calendar.SUNDAY
+        }.sumOf { it.amount }
+        if (weekdayTotal > 0 || weekendTotal > 0) {
+            insights.add(
+                Insight(
+                    title = if (weekendTotal > weekdayTotal) "You spend more on weekends" else "You spend more on weekdays",
+                    description = "Weekday total: ${"%.0f".format(weekdayTotal)}, Weekend total: ${"%.0f".format(weekendTotal)}.",
+                    severity = InsightSeverity.NEUTRAL
+                )
+            )
+        }
+
+        // Most frequent category (by transaction count, not amount)
+        val mostFrequent = expenses.groupBy { it.category.id }
+            .mapValues { it.value.size }
+            .maxByOrNull { it.value }
+        val frequentCat = categories.find { it.id == mostFrequent?.key }
+        if (frequentCat != null) {
+            insights.add(
+                Insight(
+                    title = "Most frequent category",
+                    description = "${frequentCat.name} appears in ${mostFrequent?.value} transactions this month.",
+                    severity = InsightSeverity.NEUTRAL
+                )
+            )
+        }
+
+        // Savings rate
+        val income = transactions.filter { !it.isExpense }.sumOf { it.amount }
+        if (income > 0) {
+            val savingsRate = ((income - totalExpense) / income) * 100
+            insights.add(
+                Insight(
+                    title = "Savings rate",
+                    description = if (savingsRate >= 0)
+                        "You're saving ${"%.0f".format(savingsRate)}% of your income this month."
+                    else
+                        "You're spending ${"%.0f".format(-savingsRate)}% more than you earned this month.",
+                    severity = if (savingsRate >= 20) InsightSeverity.POSITIVE else if (savingsRate < 0) InsightSeverity.NEGATIVE else InsightSeverity.NEUTRAL
+                )
+            )
+        }
         return insights
     }
 

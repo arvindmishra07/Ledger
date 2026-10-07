@@ -36,6 +36,8 @@ abstract class LedgerDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
 
     companion object {
+        const val DATABASE_NAME = "ledger_database"
+
         @Volatile
         private var INSTANCE: LedgerDatabase? = null
 
@@ -44,12 +46,19 @@ abstract class LedgerDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     LedgerDatabase::class.java,
-                    "ledger_database"
+                    DATABASE_NAME
                 )
                     .addCallback(SeedCallback())
                     .build()
                 INSTANCE = instance
                 instance
+            }
+        }
+
+        fun closeInstance() {
+            synchronized(this) {
+                INSTANCE?.close()
+                INSTANCE = null
             }
         }
     }

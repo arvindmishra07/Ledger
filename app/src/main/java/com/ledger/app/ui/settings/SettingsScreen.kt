@@ -1,6 +1,9 @@
 package com.ledger.app.ui.settings
 
-
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -10,9 +13,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.clickable
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,12 +27,40 @@ fun SettingsScreen(
     onViewReports: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     var showResetDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showRestartDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is SettingsEvent.Message -> scope.launch { snackbarHostState.showSnackbar(event.text) }
+                is SettingsEvent.RestartRequired -> showRestartDialog = true
+            }
+        }
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
+        uri?.let { viewModel.exportToCsv(context, it) }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let { viewModel.importFromCsv(context, it) }
+    }
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri: Uri? ->
+        uri?.let { viewModel.backupDatabase(context, it) }
+    }
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let { viewModel.restoreDatabase(context, it) }
+    }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Settings") }) }
+        topBar = { TopAppBar(title = { Text("Settings") }) },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
             item {
@@ -44,10 +76,30 @@ fun SettingsScreen(
             }
             item {
                 SettingsSectionHeader("Data")
-                SettingsRow(icon = Icons.Filled.Upload, title = "Export Data", subtitle = "CSV / JSON", onClick = {})
-                SettingsRow(icon = Icons.Filled.Download, title = "Import Data", onClick = {})
-                SettingsRow(icon = Icons.Filled.Backup, title = "Backup", onClick = {})
-                SettingsRow(icon = Icons.Filled.Restore, title = "Restore", onClick = {})
+                SettingsRow(
+                    icon = Icons.Filled.Upload,
+                    title = "Export Data",
+                    subtitle = "Save as a spreadsheet (CSV)",
+                    onClick = { exportLauncher.launch("ledger_export_${System.currentTimeMillis()}.csv") }
+                )
+                SettingsRow(
+                    icon = Icons.Filled.Download,
+                    title = "Import Data",
+                    subtitle = "From a CSV file",
+                    onClick = { importLauncher.launch(arrayOf("text/*", "text/csv", "text/comma-separated-values")) }
+                )
+                SettingsRow(
+                    icon = Icons.Filled.Backup,
+                    title = "Backup",
+                    subtitle = "Save a full copy of your data",
+                    onClick = { backupLauncher.launch("ledger_backup_${System.currentTimeMillis()}.db") }
+                )
+                SettingsRow(
+                    icon = Icons.Filled.Restore,
+                    title = "Restore",
+                    subtitle = "Replace current data from a backup",
+                    onClick = { restoreLauncher.launch(arrayOf("application/octet-stream", "*/*")) }
+                )
                 SettingsRow(
                     icon = Icons.Filled.DeleteForever,
                     title = "Reset Data",
@@ -69,15 +121,23 @@ fun SettingsScreen(
             title = { Text("Reset all data?") },
             text = { Text("This will permanently delete all transactions. This cannot be undone.") },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.resetAllData()
-                    showResetDialog = false
-                }) {
+                TextButton(onClick = { viewModel.resetAllData(); showResetDialog = false }) {
                     Text("Reset", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
+            dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("Cancel") } }
+        )
+    }
+
+    if (showRestartDialog) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Restore complete") },
+            text = { Text("Your data has been restored. The app needs to restart to apply it.") },
+            confirmButton = {
+                TextButton(onClick = { Runtime.getRuntime().exit(0) }) {
+                    Text("Restart Now")
+                }
             }
         )
     }
@@ -90,27 +150,14 @@ fun SettingsScreen(
             text = {
                 Column {
                     options.forEach { symbol ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = state.currency == symbol,
-                                onClick = {
-                                    viewModel.setCurrency(symbol)
-                                    showCurrencyDialog = false
-                                }
-                            )
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = state.currency == symbol, onClick = { viewModel.setCurrency(symbol); showCurrencyDialog = false })
                             Text(symbol, style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showCurrencyDialog = false }) { Text("Close") }
-            }
+            confirmButton = { TextButton(onClick = { showCurrencyDialog = false }) { Text("Close") } }
         )
     }
 
@@ -122,27 +169,14 @@ fun SettingsScreen(
             text = {
                 Column {
                     options.forEach { theme ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = state.theme == theme,
-                                onClick = {
-                                    viewModel.setTheme(theme)
-                                    showThemeDialog = false
-                                }
-                            )
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = state.theme == theme, onClick = { viewModel.setTheme(theme); showThemeDialog = false })
                             Text(theme.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showThemeDialog = false }) { Text("Close") }
-            }
+            confirmButton = { TextButton(onClick = { showThemeDialog = false }) { Text("Close") } }
         )
     }
 }
@@ -169,7 +203,7 @@ private fun SettingsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable_settings(onClick)
+            .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -187,7 +221,3 @@ private fun SettingsRow(
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
-
-private fun Modifier.clickable_settings(onClick: () -> Unit): Modifier = this.then(
-    Modifier.clickable(onClick = onClick)
-)

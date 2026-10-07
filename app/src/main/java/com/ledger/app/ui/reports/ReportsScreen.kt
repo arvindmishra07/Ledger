@@ -57,7 +57,18 @@ fun ReportsScreen(viewModel: ReportsViewModel) {
                 }
                 Spacer(Modifier.height(20.dp))
             }
-
+            item {
+                ChartCard(
+                    title = "Income vs Expense",
+                    modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth()
+                ) {
+                    BarChart(
+                        values = listOf(state.totalIncome.toFloat(), state.totalExpense.toFloat()),
+                        labels = listOf("Income", "Expense")
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
+            }
             if (state.dailyTrend.isNotEmpty()) {
                 item {
                     ChartCard(

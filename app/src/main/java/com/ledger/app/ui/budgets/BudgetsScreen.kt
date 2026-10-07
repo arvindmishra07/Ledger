@@ -25,8 +25,13 @@ import com.ledger.app.ui.theme.CardShape
 @Composable
 fun BudgetsScreen(viewModel: BudgetsViewModel) {
     val state by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold { padding ->
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { msg -> snackbarHostState.showSnackbar(msg) }
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         LazyColumn(
             modifier = Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(bottom = 40.dp)
@@ -74,7 +79,7 @@ fun BudgetsScreen(viewModel: BudgetsViewModel) {
                     )
                     Spacer(Modifier.height(10.dp))
                 }
-                items(state.categoryBudgets, key = { it.id }) { budget ->
+                items(state.categoryBudgets, key = { "budget_${it.id}" }) { budget ->
                     BudgetCard(
                         budget = budget,
                         currencySymbol = "₹",
@@ -95,7 +100,7 @@ fun BudgetsScreen(viewModel: BudgetsViewModel) {
                     )
                     Spacer(Modifier.height(10.dp))
                 }
-                items(state.categoriesWithoutBudget, key = { it.id }) { cat ->
+                items(state.categoriesWithoutBudget, key = { "category_${it.id}" }) { cat ->
                     AddBudgetRow(category = cat, onClick = { viewModel.openCategoryEditor(cat.id) })
                 }
             }

@@ -7,6 +7,13 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="splash_background">#0D1117</color>
-    <color name="splash_icon_tint">#00C896</color>
+
+    <!-- Option 3 Theme Palette -->
+    <color name="splash_background">#16302A</color>
+    <color name="splash_surface_dark">#132B20</color>
+    <color name="splash_wave_accent">#1F4435</color>
+    <color name="splash_icon_mint">#C8F5D2</color>
+    <color name="splash_icon_glow">#EAFDF0</color>
+    <color name="splash_text_title">#C8F5D2</color>
+    <color name="splash_text_subtitle">#8EC79E</color>
 </resources>
